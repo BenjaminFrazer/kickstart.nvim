@@ -247,17 +247,67 @@ require('lazy').setup({
   -- See `:help gitsigns` to understand what the configuration keys do
   { -- Adds git related signs to the gutter, as well as utilities for managing changes
     'lewis6991/gitsigns.nvim',
+    config = function(LazyPlugin, opts)
+      require('gitsigns').setup(opts)
+    end,
     opts = {
       signs = {
-        add = { text = '+' },
-        change = { text = '~' },
+        add = { text = '┃' },
+        change = { text = '┃' },
         delete = { text = '_' },
         topdelete = { text = '‾' },
         changedelete = { text = '~' },
+        untracked = { text = '┆' },
+      },
+      signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
+      numhl = false, -- Toggle with `:Gitsigns toggle_numhl`
+      linehl = false, -- Toggle with `:Gitsigns toggle_linehl`
+      word_diff = false, -- Toggle with `:Gitsigns toggle_word_diff`
+      watch_gitdir = {
+        follow_files = true,
+      },
+      auto_attach = true,
+      attach_to_untracked = false,
+      current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
+      current_line_blame_opts = {
+        virt_text = true,
+        virt_text_pos = 'eol', -- 'eol' | 'overlay' | 'right_align'
+        delay = 1000,
+        ignore_whitespace = false,
+        virt_text_priority = 100,
+      },
+      current_line_blame_formatter = '<author>, <author_time:%Y-%m-%d> - <summary>',
+      current_line_blame_formatter_opts = {
+        relative_time = false,
+      },
+      sign_priority = 6,
+      update_debounce = 100,
+      status_formatter = nil, -- Use default
+      max_file_length = 40000, -- Disable if file is longer than this (in lines)
+      preview_config = {
+        -- Options passed to nvim_open_win
+        border = 'single',
+        style = 'minimal',
+        relative = 'cursor',
+        row = 0,
+        col = 1,
       },
     },
   },
+  {
+    'NeogitOrg/neogit',
+    dependencies = {
+      'nvim-lua/plenary.nvim', -- required
+      'sindrets/diffview.nvim', -- optional - Diff integration
 
+      -- Only one of these is needed, not both.
+      'nvim-telescope/telescope.nvim', -- optional
+    },
+    config = true,
+    keys = {
+      { '<leader>gg', '<cmd>Neogit<cr>', desc = 'Open Neogit' },
+    },
+  },
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
   --
   -- This is often very useful to both group configuration, as well as handle
@@ -358,7 +408,18 @@ require('lazy').setup({
         --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
         --   },
         -- },
-        -- pickers = {}
+        pickers = {
+          live_grep = {
+            file_ignore_patterns = { '.git', '.venv' },
+            additional_args = function(_)
+              return { '--hidden' }
+            end,
+          },
+          find_files = {
+            file_ignore_patterns = { '.git', '.venv' },
+            hidden = true,
+          },
+        },
         extensions = {
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
@@ -380,8 +441,10 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
+      vim.keymap.set('n', '<leader>si', builtin.lsp_document_symbols, { desc = '[S]earch Symbols' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
-      vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
+      vim.keymap.set('n', '<leader>,', builtin.buffers, { desc = '[,]Search Open Files' })
+      vim.keymap.set('n', '<leader><leader>', require('custom.plugins.tools').find_git_root, { desc = '[ ]Search files in git dir' })
 
       -- Slightly advanced example of overriding default behavior and theme
       vim.keymap.set('n', '<leader>/', function()
@@ -469,31 +532,31 @@ require('lazy').setup({
           -- Jump to the definition of the word under your cursor.
           --  This is where a variable was first declared, or where a function is defined, etc.
           --  To jump back, press <C-t>.
-          map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
+          map('<leader>cd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
 
           -- Find references for the word under your cursor.
-          map('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
+          map('<leader>cR', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
 
           -- Jump to the implementation of the word under your cursor.
           --  Useful when your language has ways of declaring types without an actual implementation.
-          map('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
+          map('<leader>cI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
 
           -- Jump to the type of the word under your cursor.
           --  Useful when you're not sure what type a variable is and you want to see
           --  the definition of its *type*, not where it was *defined*.
-          map('<leader>D', require('telescope.builtin').lsp_type_definitions, 'Type [D]efinition')
+          map('<leader>ct', require('telescope.builtin').lsp_type_definitions, 'Type [D]efinition')
 
           -- Fuzzy find all the symbols in your current document.
           --  Symbols are things like variables, functions, types, etc.
-          map('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
+          map('<leader>si', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
 
           -- Fuzzy find all the symbols in your current workspace.
           --  Similar to document symbols, except searches over your entire project.
-          map('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
+          map('<leader>sp', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
 
           -- Rename the variable under your cursor.
           --  Most Language Servers support renaming across files, etc.
-          map('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
+          map('<leader>cr', vim.lsp.buf.rename, '[R]e[n]ame')
 
           -- Execute a code action, usually your cursor needs to be on top of an error
           -- or a suggestion from your LSP for this to activate.
@@ -501,11 +564,11 @@ require('lazy').setup({
 
           -- Opens a popup that displays documentation about the word under your cursor
           --  See `:help K` for why this keymap.
-          map('K', vim.lsp.buf.hover, 'Hover Documentation')
+          map('ck', vim.lsp.buf.hover, 'Hover Documentation')
 
           -- WARN: This is not Goto Definition, this is Goto Declaration.
           --  For example, in C this would take you to the header.
-          map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
+          map('cD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
           -- The following two autocommands are used to highlight references of the
           -- word under your cursor when your cursor rests there for a little while.
@@ -565,7 +628,7 @@ require('lazy').setup({
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
-        -- clangd = {},
+        clangd = {},
         -- gopls = {},
         -- pyright = {},
         -- rust_analyzer = {},
@@ -878,14 +941,106 @@ require('lazy').setup({
   -- require 'kickstart.plugins.lint',
   -- require 'kickstart.plugins.autopairs',
   -- require 'kickstart.plugins.neo-tree',
-  -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
+  require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
+  -- Tmux Navigator
+  -- {
+  --   'alexghergh/nvim-tmux-navigation',
+  --   config = function()
+  --     local nvim_tmux_nav = require 'nvim-tmux-navigation'
+
+  --     nvim_tmux_nav.setup {
+  --       disable_when_zoomed = true, -- defaults to false
+  --     }
+
+  --     vim.keymap.set('n', '<C-h>', nvim_tmux_nav.NvimTmuxNavigateLeft)
+  --     vim.keymap.set('n', '<C-j>', nvim_tmux_nav.NvimTmuxNavigateDown)
+  --     vim.keymap.set('n', '<C-k>', nvim_tmux_nav.NvimTmuxNavigateUp)
+  --     vim.keymap.set('n', '<C-l>', nvim_tmux_nav.NvimTmuxNavigateRight)
+  --     vim.keymap.set('n', '<C-\\>', nvim_tmux_nav.NvimTmuxNavigateLastActive)
+  --     vim.keymap.set('n', '<C-Space>', nvim_tmux_nav.NvimTmuxNavigateNext)
+  --   end,
+  -- },
   --    For additional information, see `:help lazy.nvim-lazy.nvim-structuring-your-plugins`
   -- { import = 'custom.plugins' },
+  --
+  {
+    'aserowy/tmux.nvim',
+    config = function(LazyPlugin, opts)
+      --- vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
+      --- vim.keymap.set('n', keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
+      vim.keymap.set('n', '<M-l>', require('tmux').move_left, { desc = 'move frame left' })
+      vim.keymap.set('n', '<M-j>', require('tmux').move_bottom, { desc = 'move frame bottom' })
+      vim.keymap.set('n', '<M-k>', require('tmux').move_top, { desc = 'move frame top' })
+      vim.keymap.set('n', '<M-h>', require('tmux').move_right, { desc = 'move frame right' })
+
+      vim.keymap.set('n', '<M-L>', require('tmux').resize_left, { desc = 'move frame left' })
+      vim.keymap.set('n', '<M-J>', require('tmux').resize_bottom, { desc = 'move frame bottom' })
+      vim.keymap.set('n', '<M-K>', require('tmux').resize_top, { desc = 'move frame top' })
+      vim.keymap.set('n', '<M-H>', require('tmux').resize_right, { desc = 'move frame right' })
+      return require('tmux').setup(opts)
+    end,
+    opts = {
+      copy_sync = {
+        -- enables copy sync. by default, all registers are synchronized.
+        -- to control which registers are synced, see the `sync_*` options.
+        enable = false,
+
+        -- ignore specific tmux buffers e.g. buffer0 = true to ignore the
+        -- first buffer or named_buffer_name = true to ignore a named tmux
+        -- buffer with name named_buffer_name :)
+        ignore_buffers = { empty = false },
+
+        -- TMUX >= 3.2: all yanks (and deletes) will get redirected to system
+        -- clipboard by tmux
+        redirect_to_clipboard = false,
+
+        -- offset controls where register sync starts
+        -- e.g. offset 2 lets registers 0 and 1 untouched
+        register_offset = 0,
+
+        -- overwrites vim.g.clipboard to redirect * and + to the system
+        -- clipboard using tmux. If you sync your system clipboard without tmux,
+        -- disable this option!
+        sync_clipboard = true,
+
+        -- synchronizes registers *, +, unnamed, and 0 till 9 with tmux buffers.
+        sync_registers = true,
+
+        -- syncs deletes with tmux clipboard as well, it is adviced to
+        -- do so. Nvim does not allow syncing registers 0 and 1 without
+        -- overwriting the unnamed register. Thus, ddp would not be possible.
+        sync_deletes = true,
+
+        -- syncs the unnamed register with the first buffer entry from tmux.
+        sync_unnamed = true,
+      },
+      navigation = {
+        -- cycles to opposite pane while navigating into the border
+        cycle_navigation = true,
+
+        -- enables default keybindings (C-hjkl) for normal mode
+        enable_default_keybindings = false,
+
+        -- prevents unzoom tmux when navigating beyond vim border
+        persist_zoom = false,
+      },
+      resize = {
+        -- enables default keybindings (A-hjkl) for normal mode
+        enable_default_keybindings = false,
+
+        -- sets resize steps for x axis
+        resize_step_x = 1,
+
+        -- sets resize steps for y axis
+        resize_step_y = 1,
+      },
+    },
+  },
 }, {
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the

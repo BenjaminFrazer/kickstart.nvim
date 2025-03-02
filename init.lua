@@ -142,8 +142,11 @@ vim.opt.splitbelow = true
 -- Sets how neovim will display certain whitespace characters in the editor.
 --  See `:help 'list'`
 --  and `:help 'listchars'`
-vim.opt.list = true
+vim.opt.list = false
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
+vim.opt.tabstop=2
+vim.opt.shiftwidth=0 -- inherits the tabstop value
+vim.g.editorconfig = false
 
 -- Preview substitutions live, as you type!
 vim.opt.inccommand = 'split'
@@ -153,6 +156,12 @@ vim.opt.cursorline = true
 
 -- Minimal number of screen lines to keep above and below the cursor.
 vim.opt.scrolloff = 10
+
+vim.opt.foldmethod = "expr"
+vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+
+vim.opt.conceallevel=1
+
 
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
@@ -190,6 +199,14 @@ vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right win
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
+vim.keymap.set('n', '<leader>pc', '<cmd>make<cr>', { desc = 'compile project' })
+
+-- open file_browser with the path of the current buffer
+vim.keymap.set('n', '<space>.', ':Telescope file_browser path=%:p:h select_buffer=true<CR>')
+
+vim.api.nvim_create_user_command("CopyRelPath", "call setreg('+', expand('%'))", {})
+vim.keymap.set('n', '<leader>fy', '<cmd>CopyRelPath<cr>', { desc = 'Yank relative path' })
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
@@ -226,7 +243,7 @@ vim.opt.rtp:prepend(lazypath)
 -- NOTE: Here is where you install your plugins.
 require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
-  'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
+  --'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
 
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
@@ -330,19 +347,17 @@ require('lazy').setup({
       require('which-key').setup()
 
       -- Document existing key chains
-      require('which-key').register {
-        ['<leader>c'] = { name = '[C]ode', _ = 'which_key_ignore' },
-        ['<leader>d'] = { name = '[D]ocument', _ = 'which_key_ignore' },
-        ['<leader>r'] = { name = '[R]ename', _ = 'which_key_ignore' },
-        ['<leader>s'] = { name = '[S]earch', _ = 'which_key_ignore' },
-        ['<leader>w'] = { name = '[W]orkspace', _ = 'which_key_ignore' },
-        ['<leader>t'] = { name = '[T]oggle', _ = 'which_key_ignore' },
-        ['<leader>h'] = { name = 'Git [H]unk', _ = 'which_key_ignore' },
+      require('which-key').add{
+        { "<leader>c", desc = "[C]ode" },
+        { "<leader>d", desc = "[D]ocument" },
+        { "<leader>h", desc = "Git [H]unk" },
+        { "<leader>r", desc = "[R]ename" },
+        { "<leader>s", desc = "[S]earch" },
+        { "<leader>t", desc = "[T]oggle" },
+        { "<leader>w", desc = "[W]orkspace" },
+        { "<leader>t", desc = "[T]oggle" },
+        { "<leader>h", desc = "Git [H]unk" },
       }
-      -- visual mode
-      require('which-key').register({
-        ['<leader>h'] = { 'Git [H]unk' },
-      }, { mode = 'v' })
     end,
   },
 
@@ -436,14 +451,14 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
-      vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
+      vim.keymap.set('n', '<leader>ss', builtin.current_buffer_fuzzy_find, { desc = '[S]earch current buffer Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>si', builtin.lsp_document_symbols, { desc = '[S]earch Symbols' })
-      vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
-      vim.keymap.set('n', '<leader>,', builtin.buffers, { desc = '[,]Search Open Files' })
+      vim.keymap.set('n', '<leader>,', builtin.oldfiles, { desc = '[S]earch Recent Files' })
+      vim.keymap.set('n', '<leader>so', builtin.vim_options, { desc = '[S]earch [O]ptions' })
       vim.keymap.set('n', '<leader><leader>', require('custom.plugins.tools').find_git_root, { desc = '[ ]Search files in git dir' })
 
       -- Slightly advanced example of overriding default behavior and theme
@@ -630,7 +645,8 @@ require('lazy').setup({
       local servers = {
         clangd = {},
         -- gopls = {},
-        -- pyright = {},
+        pyright = {},
+        marksman = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -693,7 +709,7 @@ require('lazy').setup({
     lazy = false,
     keys = {
       {
-        '<leader>f',
+        '<leader>bf',
         function()
           require('conform').format { async = true, lsp_fallback = true }
         end,
@@ -702,21 +718,23 @@ require('lazy').setup({
       },
     },
     opts = {
+
       notify_on_error = false,
-      format_on_save = function(bufnr)
-        -- Disable "format_on_save lsp_fallback" for languages that don't
-        -- have a well standardized coding style. You can add additional
-        -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
-        return {
-          timeout_ms = 500,
-          lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
-        }
-      end,
+      format_on_save = false,
+      --      format_on_save = function(bufnr)
+      --        -- Disable "format_on_save lsp_fallback" for languages that don't
+      --        -- have a well standardized coding style. You can add additional
+      --        -- languages here or re-enable it for the disabled ones.
+      --        local disable_filetypes = { c = true, cpp = true }
+      --        return {
+      --          timeout_ms = 500,
+      --          lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
+      --        }
+      --      end,
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
+        python = { "isort", "black" },
         --
         -- You can use a sub-list to tell conform to run *until* a formatter
         -- is found.
@@ -760,6 +778,7 @@ require('lazy').setup({
       --  into multiple repos for maintenance purposes.
       'hrsh7th/cmp-nvim-lsp',
       'hrsh7th/cmp-path',
+      'jc-doyle/cmp-pandoc-references',
     },
     config = function()
       -- See `:help cmp`
@@ -831,6 +850,7 @@ require('lazy').setup({
           { name = 'nvim_lsp' },
           { name = 'luasnip' },
           { name = 'path' },
+          { name = 'pandoc_references' },
         },
       }
     end,
@@ -842,6 +862,13 @@ require('lazy').setup({
     --
     -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
     'folke/tokyonight.nvim',
+    opts = {
+      transparent = true,
+      styles = {
+        sidebars = 'transparent',
+        floats = 'transparent',
+      },
+    },
     priority = 1000, -- Make sure to load this before all the other start plugins.
     init = function()
       -- Load the colorscheme here.
@@ -968,20 +995,57 @@ require('lazy').setup({
   --    For additional information, see `:help lazy.nvim-lazy.nvim-structuring-your-plugins`
   -- { import = 'custom.plugins' },
   --
+    {
+    "folke/trouble.nvim",
+    opts = {}, -- for default options, refer to the configuration section for custom setup.
+    cmd = "Trouble",
+    keys = {
+      {
+        "<leader>xx",
+        "<cmd>Trouble diagnostics toggle<cr>",
+        desc = "Diagnostics (Trouble)",
+      },
+      {
+        "<leader>xX",
+        "<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
+        desc = "Buffer Diagnostics (Trouble)",
+      },
+      {
+        "<leader>cs",
+        "<cmd>Trouble symbols toggle focus=false<cr>",
+        desc = "Symbols (Trouble)",
+      },
+      {
+        "<leader>cl",
+        "<cmd>Trouble lsp toggle focus=false win.position=right<cr>",
+        desc = "LSP Definitions / references / ... (Trouble)",
+      },
+      {
+        "<leader>xL",
+        "<cmd>Trouble loclist toggle<cr>",
+        desc = "Location List (Trouble)",
+      },
+      {
+        "<leader>xQ",
+        "<cmd>Trouble qflist toggle<cr>",
+        desc = "Quickfix List (Trouble)",
+      },
+    },
+  },
   {
     'aserowy/tmux.nvim',
     config = function(LazyPlugin, opts)
       --- vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       --- vim.keymap.set('n', keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
-      vim.keymap.set('n', '<M-l>', require('tmux').move_left, { desc = 'move frame left' })
+      vim.keymap.set('n', '<M-l>', require('tmux').move_right, { desc = 'move frame left' })
       vim.keymap.set('n', '<M-j>', require('tmux').move_bottom, { desc = 'move frame bottom' })
       vim.keymap.set('n', '<M-k>', require('tmux').move_top, { desc = 'move frame top' })
-      vim.keymap.set('n', '<M-h>', require('tmux').move_right, { desc = 'move frame right' })
+      vim.keymap.set('n', '<M-h>', require('tmux').move_left, { desc = 'move frame right' })
 
-      vim.keymap.set('n', '<M-L>', require('tmux').resize_left, { desc = 'move frame left' })
+      vim.keymap.set('n', '<M-L>', require('tmux').resize_right, { desc = 'move frame left' })
       vim.keymap.set('n', '<M-J>', require('tmux').resize_bottom, { desc = 'move frame bottom' })
       vim.keymap.set('n', '<M-K>', require('tmux').resize_top, { desc = 'move frame top' })
-      vim.keymap.set('n', '<M-H>', require('tmux').resize_right, { desc = 'move frame right' })
+      vim.keymap.set('n', '<M-H>', require('tmux').resize_left, { desc = 'move frame right' })
       return require('tmux').setup(opts)
     end,
     opts = {
@@ -1040,6 +1104,64 @@ require('lazy').setup({
         resize_step_y = 1,
       },
     },
+  },
+  {
+    'numToStr/FTerm.nvim',
+    config = function(self, opts)
+      require('FTerm').setup(opts)
+    end,
+    opts = {
+      border = 'double',
+      dimensions = {
+        height = 0.9,
+        width = 0.9,
+      },
+      auto_close = true,
+    },
+    keys = {
+      --{
+      --  '<leader>pc',
+      --  function()
+      --    require('FTerm').scratch { cmd = 'make' }
+      --  end,
+      --  desc = 'Run Make',
+      --},
+    },
+  },
+--  {
+--    "epwalsh/obsidian.nvim",
+--    version = "*",  -- recommended, use latest release instead of latest commit
+--    lazy = true,
+--    ft = "markdown",
+--    -- Replace the above line with this if you only want to load obsidian.nvim for markdown files in your vault:
+--    -- event = {
+--    --   -- If you want to use the home shortcut '~' here you need to call 'vim.fn.expand'.
+--    --   -- E.g. "BufReadPre " .. vim.fn.expand "~" .. "/my-vault/*.md"
+--    --   -- refer to `:h file-pattern` for more examples
+--    --   "BufReadPre path/to/my-vault/*.md",
+--    --   "BufNewFile path/to/my-vault/*.md",
+--    -- },
+--    dependencies = {
+--      -- Required.
+--      "nvim-lua/plenary.nvim",
+--
+--      -- see below for full list of optional dependencies 👇
+--    },
+--    opts = {
+--      workspaces = {
+--        {
+--          name = "notes",
+--          path = "~/repos/pandoc-filters/out/",
+--        },
+--      },
+--
+--      -- see below for full list of options 👇
+--    },
+--  },
+  --lazy
+  {
+    'nvim-telescope/telescope-file-browser.nvim',
+    dependencies = { 'nvim-telescope/telescope.nvim', 'nvim-lua/plenary.nvim' },
   },
 }, {
   ui = {

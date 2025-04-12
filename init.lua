@@ -157,8 +157,8 @@ vim.opt.cursorline = true
 -- Minimal number of screen lines to keep above and below the cursor.
 vim.opt.scrolloff = 10
 
-vim.opt.foldmethod = "expr"
-vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+--vim.opt.foldmethod = "expr"
+--vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 
 vim.opt.conceallevel=1
 
@@ -189,6 +189,12 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 -- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
 -- vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
 -- vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
+--
+-- Make <C-w>+ and <C-w>- resize by 5 lines instead of 1
+vim.keymap.set('n', '<C-w>+', ':resize +10<CR>', { desc = 'Resize window taller' })
+vim.keymap.set('n', '<C-w>-', ':resize -10<CR>', { desc = 'Resize window shorter' })
+vim.keymap.set('n', '<C-w><', ':vertical resize -10<CR>', { desc = 'Resize window narrower' })
+vim.keymap.set('n', '<C-w>>', ':vertical resize +10<CR>', { desc = 'Resize window wider' })
 
 -- Keybinds to make split navigation easier.
 --  Use CTRL+<hjkl> to switch between windows
@@ -972,29 +978,6 @@ require('lazy').setup({
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
-  --
-  --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- Tmux Navigator
-  -- {
-  --   'alexghergh/nvim-tmux-navigation',
-  --   config = function()
-  --     local nvim_tmux_nav = require 'nvim-tmux-navigation'
-
-  --     nvim_tmux_nav.setup {
-  --       disable_when_zoomed = true, -- defaults to false
-  --     }
-
-  --     vim.keymap.set('n', '<C-h>', nvim_tmux_nav.NvimTmuxNavigateLeft)
-  --     vim.keymap.set('n', '<C-j>', nvim_tmux_nav.NvimTmuxNavigateDown)
-  --     vim.keymap.set('n', '<C-k>', nvim_tmux_nav.NvimTmuxNavigateUp)
-  --     vim.keymap.set('n', '<C-l>', nvim_tmux_nav.NvimTmuxNavigateRight)
-  --     vim.keymap.set('n', '<C-\\>', nvim_tmux_nav.NvimTmuxNavigateLastActive)
-  --     vim.keymap.set('n', '<C-Space>', nvim_tmux_nav.NvimTmuxNavigateNext)
-  --   end,
-  -- },
-  --    For additional information, see `:help lazy.nvim-lazy.nvim-structuring-your-plugins`
-  -- { import = 'custom.plugins' },
-  --
     {
     "folke/trouble.nvim",
     opts = {}, -- for default options, refer to the configuration section for custom setup.
@@ -1032,133 +1015,6 @@ require('lazy').setup({
       },
     },
   },
-  {
-    'aserowy/tmux.nvim',
-    config = function(LazyPlugin, opts)
-      --- vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
-      --- vim.keymap.set('n', keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
-      vim.keymap.set('n', '<M-l>', require('tmux').move_right, { desc = 'move frame left' })
-      vim.keymap.set('n', '<M-j>', require('tmux').move_bottom, { desc = 'move frame bottom' })
-      vim.keymap.set('n', '<M-k>', require('tmux').move_top, { desc = 'move frame top' })
-      vim.keymap.set('n', '<M-h>', require('tmux').move_left, { desc = 'move frame right' })
-
-      vim.keymap.set('n', '<M-L>', require('tmux').resize_right, { desc = 'move frame left' })
-      vim.keymap.set('n', '<M-J>', require('tmux').resize_bottom, { desc = 'move frame bottom' })
-      vim.keymap.set('n', '<M-K>', require('tmux').resize_top, { desc = 'move frame top' })
-      vim.keymap.set('n', '<M-H>', require('tmux').resize_left, { desc = 'move frame right' })
-      return require('tmux').setup(opts)
-    end,
-    opts = {
-      copy_sync = {
-        -- enables copy sync. by default, all registers are synchronized.
-        -- to control which registers are synced, see the `sync_*` options.
-        enable = false,
-
-        -- ignore specific tmux buffers e.g. buffer0 = true to ignore the
-        -- first buffer or named_buffer_name = true to ignore a named tmux
-        -- buffer with name named_buffer_name :)
-        ignore_buffers = { empty = false },
-
-        -- TMUX >= 3.2: all yanks (and deletes) will get redirected to system
-        -- clipboard by tmux
-        redirect_to_clipboard = false,
-
-        -- offset controls where register sync starts
-        -- e.g. offset 2 lets registers 0 and 1 untouched
-        register_offset = 0,
-
-        -- overwrites vim.g.clipboard to redirect * and + to the system
-        -- clipboard using tmux. If you sync your system clipboard without tmux,
-        -- disable this option!
-        sync_clipboard = true,
-
-        -- synchronizes registers *, +, unnamed, and 0 till 9 with tmux buffers.
-        sync_registers = true,
-
-        -- syncs deletes with tmux clipboard as well, it is adviced to
-        -- do so. Nvim does not allow syncing registers 0 and 1 without
-        -- overwriting the unnamed register. Thus, ddp would not be possible.
-        sync_deletes = true,
-
-        -- syncs the unnamed register with the first buffer entry from tmux.
-        sync_unnamed = true,
-      },
-      navigation = {
-        -- cycles to opposite pane while navigating into the border
-        cycle_navigation = true,
-
-        -- enables default keybindings (C-hjkl) for normal mode
-        enable_default_keybindings = false,
-
-        -- prevents unzoom tmux when navigating beyond vim border
-        persist_zoom = false,
-      },
-      resize = {
-        -- enables default keybindings (A-hjkl) for normal mode
-        enable_default_keybindings = false,
-
-        -- sets resize steps for x axis
-        resize_step_x = 1,
-
-        -- sets resize steps for y axis
-        resize_step_y = 1,
-      },
-    },
-  },
-  {
-    'numToStr/FTerm.nvim',
-    config = function(self, opts)
-      require('FTerm').setup(opts)
-    end,
-    opts = {
-      border = 'double',
-      dimensions = {
-        height = 0.9,
-        width = 0.9,
-      },
-      auto_close = true,
-    },
-    keys = {
-      --{
-      --  '<leader>pc',
-      --  function()
-      --    require('FTerm').scratch { cmd = 'make' }
-      --  end,
-      --  desc = 'Run Make',
-      --},
-    },
-  },
---  {
---    "epwalsh/obsidian.nvim",
---    version = "*",  -- recommended, use latest release instead of latest commit
---    lazy = true,
---    ft = "markdown",
---    -- Replace the above line with this if you only want to load obsidian.nvim for markdown files in your vault:
---    -- event = {
---    --   -- If you want to use the home shortcut '~' here you need to call 'vim.fn.expand'.
---    --   -- E.g. "BufReadPre " .. vim.fn.expand "~" .. "/my-vault/*.md"
---    --   -- refer to `:h file-pattern` for more examples
---    --   "BufReadPre path/to/my-vault/*.md",
---    --   "BufNewFile path/to/my-vault/*.md",
---    -- },
---    dependencies = {
---      -- Required.
---      "nvim-lua/plenary.nvim",
---
---      -- see below for full list of optional dependencies 👇
---    },
---    opts = {
---      workspaces = {
---        {
---          name = "notes",
---          path = "~/repos/pandoc-filters/out/",
---        },
---      },
---
---      -- see below for full list of options 👇
---    },
---  },
-  --lazy
   {
     'nvim-telescope/telescope-file-browser.nvim',
     dependencies = { 'nvim-telescope/telescope.nvim', 'nvim-lua/plenary.nvim' },

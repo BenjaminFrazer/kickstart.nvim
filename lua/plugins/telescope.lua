@@ -1,7 +1,7 @@
 return {
   'nvim-telescope/telescope.nvim',
   event = 'VimEnter',
-  branch = '0.1.x',
+  branch = 'master',
   dependencies = {
     'nvim-lua/plenary.nvim',
     {
@@ -54,7 +54,22 @@ return {
     vim.keymap.set('n', '<leader>si', builtin.lsp_document_symbols, { desc = '[S]earch Symbols' })
     vim.keymap.set('n', '<leader>,', builtin.oldfiles, { desc = 'Search Recent Files' })
     vim.keymap.set('n', '<leader>so', builtin.vim_options, { desc = '[S]earch [O]ptions' })
-    vim.keymap.set('n', '<leader><leader>', require('config.tools').find_git_root, { desc = 'Search files in git dir' })
+    vim.keymap.set('n', '<leader><leader>', function()
+      -- Get git root directory
+      local git_root = vim.fn.systemlist('git rev-parse --show-toplevel')[1]
+      if vim.v.shell_error ~= 0 then
+        -- Not in a git repo, use current working directory
+        git_root = vim.fn.getcwd()
+      end
+      
+      -- Use oldfiles to get recently edited files, then filter by git root
+      builtin.oldfiles {
+        cwd = git_root,
+        cwd_only = true,
+        -- This will show only files from the current workspace
+        only_cwd = true,
+      }
+    end, { desc = 'Recent files in workspace' })
 
     -- Advanced keymaps
     vim.keymap.set('n', '<leader>/', function()

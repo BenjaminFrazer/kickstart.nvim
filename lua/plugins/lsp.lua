@@ -1,15 +1,88 @@
 return {
   'neovim/nvim-lspconfig',
+  event = { 'BufReadPre', 'BufNewFile' },
   dependencies = {
-    { 'williamboman/mason.nvim', config = true },
+    'williamboman/mason.nvim',
     'williamboman/mason-lspconfig.nvim',
-    'WhoIsSethDaniel/mason-tool-installer.nvim',
     { 'j-hui/fidget.nvim', opts = {} },
     { 'folke/neodev.nvim', opts = {} },
   },
   config = function()
+    -- Setup mason first
+    require('mason').setup()
+    
+    -- Setup mason-lspconfig
+    require('mason-lspconfig').setup({
+      ensure_installed = { 'lua_ls', 'pyright', 'clangd', 'marksman' },
+    })
+    
+    -- Manually ensure formatters are installed
+    vim.defer_fn(function()
+      local registry = require('mason-registry')
+      local function ensure_installed(name)
+        local ok, pkg = pcall(registry.get_package, name)
+        if ok and not pkg:is_installed() then
+          vim.notify('Installing ' .. name)
+          pkg:install()
+        end
+      end
+      
+      -- Install formatters
+      ensure_installed('stylua')
+      ensure_installed('black')
+      ensure_installed('isort')
+    end, 100)
+    
+    -- Setup capabilities for nvim-cmp
+    local capabilities = vim.lsp.protocol.make_client_capabilities()
+    local has_cmp, cmp_nvim_lsp = pcall(require, 'cmp_nvim_lsp')
+    if has_cmp then
+      capabilities = vim.tbl_deep_extend('force', capabilities, cmp_nvim_lsp.default_capabilities())
+    end
+    
+    -- Configure individual servers
+    local lspconfig = require('lspconfig')
+    
+    -- Lua
+    lspconfig.lua_ls.setup({
+      capabilities = capabilities,
+      settings = {
+        Lua = {
+          completion = {
+            callSnippet = 'Replace',
+          },
+          diagnostics = {
+            globals = { 'vim' },
+          },
+          workspace = {
+            library = vim.api.nvim_get_runtime_file('', true),
+            checkThirdParty = false,
+          },
+          telemetry = {
+            enable = false,
+          },
+        },
+      },
+    })
+    
+    -- Python
+    lspconfig.pyright.setup({
+      capabilities = capabilities,
+    })
+    
+    -- C/C++
+    lspconfig.clangd.setup({
+      capabilities = capabilities,
+    })
+    
+    -- Markdown
+    lspconfig.marksman.setup({
+      capabilities = capabilities,
+    })
+    
+    -- Configure LSP keymaps on attach
     vim.api.nvim_create_autocmd('LspAttach', {
-      group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
+      group = vim.api.nvim_create_augroup('lsp-attach', { clear = true }),
       callback = function(event)
         local map = function(keys, func, desc)
           vim.keymap.set('n', keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
@@ -24,31 +97,20 @@ return {
         map('<leader>sp', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
         map('<leader>cr', vim.lsp.buf.rename, '[R]e[n]ame')
         map('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
-        map('ck', vim.lsp.buf.hover, 'Hover Documentation')
-        map('cD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
+        map('K', vim.lsp.buf.hover, 'Hover Documentation')
+        map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
         -- Highlight references
         local client = vim.lsp.get_client_by_id(event.data.client_id)
         if client and client.server_capabilities.documentHighlightProvider then
-          local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
           vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
             buffer = event.buf,
-            group = highlight_augroup,
             callback = vim.lsp.buf.document_highlight,
           })
 
           vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
             buffer = event.buf,
-            group = highlight_augroup,
             callback = vim.lsp.buf.clear_references,
-          })
-
-          vim.api.nvim_create_autocmd('LspDetach', {
-            group = vim.api.nvim_create_augroup('kickstart-lsp-detach', { clear = true }),
-            callback = function(event2)
-              vim.lsp.buf.clear_references()
-              vim.api.nvim_clear_autocmds { group = 'kickstart-lsp-highlight', buffer = event2.buf }
-            end,
           })
         end
 
@@ -60,44 +122,5 @@ return {
         end
       end,
     })
-
-    -- LSP capabilities
-    local capabilities = vim.lsp.protocol.make_client_capabilities()
-    capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
-
-    -- LSP servers configuration
-    local servers = {
-      clangd = {},
-      pyright = {},
-      marksman = {},
-      lua_ls = {
-        settings = {
-          Lua = {
-            completion = {
-              callSnippet = 'Replace',
-            },
-          },
-        },
-      },
-    }
-
-    -- Setup Mason
-    require('mason').setup()
-
-    local ensure_installed = vim.tbl_keys(servers or {})
-    vim.list_extend(ensure_installed, {
-      'stylua',
-    })
-    require('mason-tool-installer').setup { ensure_installed = ensure_installed }
-
-    require('mason-lspconfig').setup {
-      handlers = {
-        function(server_name)
-          local server = servers[server_name] or {}
-          server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-          require('lspconfig')[server_name].setup(server)
-        end,
-      },
-    }
   end,
 }

@@ -20,7 +20,7 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 vim.keymap.set('n', '<leader>pc', '<cmd>make<cr>', { desc = 'compile project' })
 
 -- File browser
-vim.keymap.set('n', '<space>.', ':Telescope file_browser path=%:p:h select_buffer=true<CR>')
+vim.keymap.set('n', '<leader>.', ':Telescope file_browser path=%:p:h select_buffer=true<CR>', { desc = 'File browser' })
 
 -- Copy relative path
 vim.api.nvim_create_user_command('CopyRelPath', "call setreg('+', expand('%'))", {})

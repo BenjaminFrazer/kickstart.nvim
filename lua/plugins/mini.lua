@@ -11,7 +11,7 @@ return {
         delete = 'ds', -- Delete surrounding
         find = 'fs', -- Find surrounding (to the right)
         find_left = 'Fs', -- Find surrounding (to the left)
-        highlight = 'hs', -- Highlight surrounding
+        highlight = 'gs', -- Highlight surrounding (changed from hs to avoid lag with h movement)
         replace = 'cs', -- Replace surrounding
         update_n_lines = 'sn', -- Update `n_lines`
         

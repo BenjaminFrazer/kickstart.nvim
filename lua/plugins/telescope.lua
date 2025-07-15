@@ -17,16 +17,31 @@ return {
   },
   config = function()
     require('telescope').setup {
+      defaults = {
+        -- Show hidden files by default
+        vimgrep_arguments = {
+          'rg',
+          '--color=never',
+          '--no-heading',
+          '--with-filename',
+          '--line-number',
+          '--column',
+          '--smart-case',
+          '--hidden',
+          '--glob', '!.git/',
+        },
+        file_ignore_patterns = { '.git/', '.venv/' },
+      },
       pickers = {
         live_grep = {
-          file_ignore_patterns = { '.git', '.venv' },
           additional_args = function(_)
             return { '--hidden' }
           end,
         },
         find_files = {
-          file_ignore_patterns = { '.git', '.venv' },
           hidden = true,
+          -- Default behavior - respects .gitignore
+          find_command = { 'rg', '--files', '--hidden', '--glob', '!.git/*' },
         },
       },
       extensions = {
@@ -45,7 +60,16 @@ return {
     local builtin = require 'telescope.builtin'
     vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
     vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
-    vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
+    vim.keymap.set('n', '<leader>sf', function()
+      builtin.find_files({ hidden = true })
+    end, { desc = '[S]earch [F]iles' })
+    vim.keymap.set('n', '<leader>sF', function()
+      builtin.find_files({ 
+        hidden = true,
+        no_ignore = true,
+        no_ignore_parent = true,
+      })
+    end, { desc = '[S]earch [F]iles (include ignored)' })
     vim.keymap.set('n', '<leader>ss', builtin.current_buffer_fuzzy_find, { desc = '[S]earch current buffer' })
     vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
     vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
@@ -68,6 +92,8 @@ return {
         cwd_only = true,
         -- This will show only files from the current workspace
         only_cwd = true,
+        -- Show hidden files but respect .gitignore
+        hidden = true,
       }
     end, { desc = 'Recent files in workspace' })
 

@@ -11,9 +11,49 @@ return {
     -- Setup mason first
     require('mason').setup()
     
-    -- Setup mason-lspconfig
+    -- Setup capabilities for nvim-cmp
+    local capabilities = vim.lsp.protocol.make_client_capabilities()
+    local has_cmp, cmp_nvim_lsp = pcall(require, 'cmp_nvim_lsp')
+    if has_cmp then
+      capabilities = vim.tbl_deep_extend('force', capabilities, cmp_nvim_lsp.default_capabilities())
+    end
+    
+    -- Define server configurations
+    local servers = {
+      lua_ls = {
+        settings = {
+          Lua = {
+            completion = {
+              callSnippet = 'Replace',
+            },
+            diagnostics = {
+              globals = { 'vim' },
+            },
+            workspace = {
+              library = vim.api.nvim_get_runtime_file('', true),
+              checkThirdParty = false,
+            },
+            telemetry = {
+              enable = false,
+            },
+          },
+        },
+      },
+      pyright = {},
+      clangd = {},
+      marksman = {},
+    }
+    
+    -- Setup mason-lspconfig with handlers
     require('mason-lspconfig').setup({
-      ensure_installed = { 'lua_ls', 'pyright', 'clangd', 'marksman' },
+      ensure_installed = vim.tbl_keys(servers),
+      handlers = {
+        function(server_name)
+          local server_config = servers[server_name] or {}
+          server_config.capabilities = capabilities
+          require('lspconfig')[server_name].setup(server_config)
+        end,
+      },
     })
     
     -- Manually ensure formatters are installed
@@ -32,53 +72,6 @@ return {
       ensure_installed('black')
       ensure_installed('isort')
     end, 100)
-    
-    -- Setup capabilities for nvim-cmp
-    local capabilities = vim.lsp.protocol.make_client_capabilities()
-    local has_cmp, cmp_nvim_lsp = pcall(require, 'cmp_nvim_lsp')
-    if has_cmp then
-      capabilities = vim.tbl_deep_extend('force', capabilities, cmp_nvim_lsp.default_capabilities())
-    end
-    
-    -- Configure individual servers
-    local lspconfig = require('lspconfig')
-    
-    -- Lua
-    lspconfig.lua_ls.setup({
-      capabilities = capabilities,
-      settings = {
-        Lua = {
-          completion = {
-            callSnippet = 'Replace',
-          },
-          diagnostics = {
-            globals = { 'vim' },
-          },
-          workspace = {
-            library = vim.api.nvim_get_runtime_file('', true),
-            checkThirdParty = false,
-          },
-          telemetry = {
-            enable = false,
-          },
-        },
-      },
-    })
-    
-    -- Python
-    lspconfig.pyright.setup({
-      capabilities = capabilities,
-    })
-    
-    -- C/C++
-    lspconfig.clangd.setup({
-      capabilities = capabilities,
-    })
-    
-    -- Markdown
-    lspconfig.marksman.setup({
-      capabilities = capabilities,
-    })
     
     -- Configure LSP keymaps on attach
     vim.api.nvim_create_autocmd('LspAttach', {

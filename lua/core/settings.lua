@@ -44,8 +44,14 @@ vim.opt.splitbelow = true
 -- Sets how neovim will display certain whitespace characters in the editor.
 vim.opt.list = false
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
-vim.opt.tabstop = 2
-vim.opt.shiftwidth = 0 -- inherits the tabstop value
+-- Simple indentation: always use 2 spaces
+vim.opt.tabstop = 2      -- A tab counts as 2 spaces
+vim.opt.shiftwidth = 2   -- Use 2 spaces for indentation
+vim.opt.expandtab = true -- Always use spaces instead of tabs
+vim.opt.smartindent = true -- Smart autoindenting
+vim.opt.softtabstop = 2  -- 2 spaces when pressing Tab
+
+-- Disable EditorConfig to keep settings consistent
 vim.g.editorconfig = false
 
 -- Preview substitutions live, as you type!

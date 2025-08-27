@@ -10,14 +10,14 @@ return {
   config = function()
     -- Setup mason first
     require('mason').setup()
-    
+
     -- Setup capabilities for nvim-cmp
     local capabilities = vim.lsp.protocol.make_client_capabilities()
     local has_cmp, cmp_nvim_lsp = pcall(require, 'cmp_nvim_lsp')
     if has_cmp then
       capabilities = vim.tbl_deep_extend('force', capabilities, cmp_nvim_lsp.default_capabilities())
     end
-    
+
     -- Define server configurations
     local servers = {
       lua_ls = {
@@ -43,10 +43,13 @@ return {
       clangd = {},
       marksman = {},
     }
-    
+
     -- Setup mason-lspconfig with handlers
-    require('mason-lspconfig').setup({
-      ensure_installed = vim.tbl_keys(servers),
+    local mason_servers = vim.tbl_keys(servers)
+
+    require('mason-lspconfig').setup {
+      ensure_installed = mason_servers,
+      automatic_installation = false, -- Don't auto-install servers
       handlers = {
         function(server_name)
           local server_config = servers[server_name] or {}
@@ -54,11 +57,12 @@ return {
           require('lspconfig')[server_name].setup(server_config)
         end,
       },
-    })
-    
+    }
+
     -- Manually ensure formatters are installed
     vim.defer_fn(function()
-      local registry = require('mason-registry')
+      local registry = require 'mason-registry'
+
       local function ensure_installed(name)
         local ok, pkg = pcall(registry.get_package, name)
         if ok and not pkg:is_installed() then
@@ -66,13 +70,13 @@ return {
           pkg:install()
         end
       end
-      
+
       -- Install formatters
-      ensure_installed('stylua')
-      ensure_installed('black')
-      ensure_installed('isort')
+      ensure_installed 'stylua'
+      ensure_installed 'black'
+      ensure_installed 'isort'
     end, 100)
-    
+
     -- Configure LSP keymaps on attach
     vim.api.nvim_create_autocmd('LspAttach', {
       group = vim.api.nvim_create_augroup('lsp-attach', { clear = true }),

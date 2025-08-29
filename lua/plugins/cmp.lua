@@ -20,6 +20,12 @@ return {
     local cmp = require 'cmp'
     local luasnip = require 'luasnip'
     luasnip.config.setup {}
+    
+    -- Load RST snippets
+    luasnip.add_snippets('rst', require('snippets.rst'))
+    
+    -- Load RST completion source
+    require('cmp_sources.rst')
 
     cmp.setup {
       snippet = {
@@ -53,5 +59,24 @@ return {
         { name = 'pandoc_references' },
       },
     }
+    
+    -- Add RST-specific source for RST files
+    cmp.setup.filetype('rst', {
+      sources = cmp.config.sources({
+        { 
+          name = 'rst_refs', 
+          priority = 1000,
+          -- Trigger immediately after backtick
+          trigger_characters = { '`' },
+        },
+        { name = 'nvim_lsp' },
+        { name = 'luasnip' },
+        { name = 'path' },
+      }),
+      -- Show completion menu automatically after trigger character
+      completion = {
+        autocomplete = { require('cmp.types').cmp.TriggerEvent.TextChanged },
+      },
+    })
   end,
 }

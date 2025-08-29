@@ -22,8 +22,35 @@ return {
             vim.keymap.set('n', keys, func, { buffer = event.buf, desc = 'RST: ' .. desc })
           end
           
-          -- Smart tag jump: immediate for single, telescope for multiple
-          local function smart_tag_jump()
+          -- Smart jump: handles both :ref: tags and :doc: references
+          local function smart_jump()
+            -- First check if we're on a :doc: reference
+            local line = vim.api.nvim_get_current_line()
+            local col = vim.fn.col('.')
+            
+            -- Look for :doc:`...` pattern in the line
+            local doc_start = line:find(':doc:`', 1, true)
+            if doc_start and col >= doc_start then
+              -- Extract the document path between backticks
+              local doc_pattern = ':doc:`([^`]+)`'
+              local doc_path = line:match(doc_pattern, doc_start)
+              
+              if doc_path then
+                -- Handle the document path (may include subdirectories)
+                local file_path = doc_path .. '.rst'
+                
+                -- Check if file exists
+                if vim.fn.filereadable(file_path) == 1 then
+                  vim.cmd('edit ' .. vim.fn.fnameescape(file_path))
+                  return
+                else
+                  vim.notify('Document not found: ' .. file_path, vim.log.levels.WARN)
+                  return
+                end
+              end
+            end
+            
+            -- Otherwise, do regular tag jump for :ref: references
             local word = vim.fn.expand '<cword>'
             -- Remove leading underscore for RST labels (definitions use _, references don't)
             local search_word = word:gsub('^_', '')
@@ -54,9 +81,9 @@ return {
             end
           end
           
-          -- Tag navigation keymaps
-          map('<C-]>', smart_tag_jump, 'Jump to tag (smart)')
-          map('gd', smart_tag_jump, 'Go to definition (smart)')
+          -- Tag navigation keymaps - now handles both :ref: and :doc:
+          map('<C-]>', smart_jump, 'Jump to tag/doc (smart)')
+          map('gd', smart_jump, 'Go to definition/document (smart)')
           
           map('g]', function()
             local word = vim.fn.expand '<cword>'
@@ -77,8 +104,8 @@ return {
             }
           end, 'Find tags (fuzzy)')
           
-          -- Leader cd - use smart tag jump
-          map('<leader>cd', smart_tag_jump, 'Go to definition (smart)')
+          -- Leader cd - use smart jump for both :ref: and :doc:
+          map('<leader>cd', smart_jump, 'Go to definition/document (smart)')
           
           map('<leader>cR', function()
             -- Search for RST references to the current word/label

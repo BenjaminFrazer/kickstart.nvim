@@ -1,4 +1,6 @@
--- Minimal LSP configuration based on official documentation
+-- Enhanced LSP configuration - add features back incrementally
+-- Rename this to lsp.lua when ready to use
+
 return {
   {
     'williamboman/mason.nvim',
@@ -9,9 +11,38 @@ return {
     'williamboman/mason-lspconfig.nvim',
     lazy = false,
     opts = {
-      ensure_installed = { 'pyright', 'lua_ls', 'clangd' },
+      ensure_installed = { 
+        'pyright',   -- Python
+        'lua_ls',    -- Lua
+        'clangd',    -- C/C++ (add back)
+        'marksman',  -- Markdown (add back)
+      },
       automatic_installation = true,
     },
+  },
+  -- Add back mason-tool-installer for formatters
+  {
+    'WhoIsSethDaniel/mason-tool-installer.nvim',
+    lazy = false,
+    opts = {
+      ensure_installed = {
+        'stylua',  -- Lua formatter
+        'black',   -- Python formatter  
+        'isort',   -- Python import sorter
+      },
+    },
+  },
+  -- Add back fidget for LSP progress
+  {
+    'j-hui/fidget.nvim',
+    lazy = false,
+    opts = {},
+  },
+  -- Add back neodev for better Neovim Lua development
+  {
+    'folke/neodev.nvim',
+    lazy = false,
+    opts = {},
   },
   {
     'neovim/nvim-lspconfig',
@@ -19,8 +50,13 @@ return {
     dependencies = {
       'williamboman/mason.nvim',
       'williamboman/mason-lspconfig.nvim',
+      'j-hui/fidget.nvim',
+      'folke/neodev.nvim',
     },
     config = function()
+      -- Setup neodev first (for Neovim Lua development)
+      require('neodev').setup()
+      
       -- Setup capabilities for completion
       local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
@@ -32,12 +68,15 @@ return {
             capabilities = capabilities,
           })
         end,
-        -- Custom setup for lua_ls
+        -- Custom setup for lua_ls with neodev
         ['lua_ls'] = function()
           require('lspconfig').lua_ls.setup({
             capabilities = capabilities,
             settings = {
               Lua = {
+                completion = {
+                  callSnippet = 'Replace',
+                },
                 diagnostics = {
                   globals = { 'vim' },
                 },
@@ -72,7 +111,7 @@ return {
           map('<leader>cr', vim.lsp.buf.rename, 'Rename')
           map('<leader>ca', vim.lsp.buf.code_action, 'Code Action')
           
-          -- Telescope integration (if available)
+          -- Telescope integration
           local has_telescope, builtin = pcall(require, 'telescope.builtin')
           if has_telescope then
             map('<leader>cd', builtin.lsp_definitions, 'Telescope Definitions')
@@ -82,10 +121,30 @@ return {
             map('<leader>si', builtin.lsp_document_symbols, 'Document Symbols')
             map('<leader>sp', builtin.lsp_dynamic_workspace_symbols, 'Workspace Symbols')
           end
+          
+          -- Add back highlight references
+          local client = vim.lsp.get_client_by_id(event.data.client_id)
+          if client and client.server_capabilities.documentHighlightProvider then
+            vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
+              buffer = event.buf,
+              callback = vim.lsp.buf.document_highlight,
+            })
+            vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
+              buffer = event.buf,
+              callback = vim.lsp.buf.clear_references,
+            })
+          end
+          
+          -- Add back inlay hints toggle
+          if client and client.server_capabilities.inlayHintProvider and vim.lsp.inlay_hint then
+            map('<leader>th', function()
+              vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled())
+            end, 'Toggle Inlay Hints')
+          end
         end,
       })
 
-      -- Optional: Show diagnostic on hover
+      -- Show diagnostic on hover
       vim.api.nvim_create_autocmd('CursorHold', {
         callback = function()
           vim.diagnostic.open_float(nil, { scope = 'cursor' })

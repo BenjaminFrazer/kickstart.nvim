@@ -37,6 +37,13 @@ return {
       cpp = { 'clang-format' },
       cuda = { 'clang-format' },
       proto = { 'clang-format' },
+      rst = { 'rstfmt' },
+      restructuredtext = { 'rstfmt' },
+    },
+    formatters = {
+      rstfmt = {
+        command = vim.fn.expand('~/.local/bin/rstfmt'),
+      },
     },
   },
 }

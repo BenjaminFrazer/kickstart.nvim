@@ -29,8 +29,9 @@ return {
           '--smart-case',
           '--hidden',
           '--glob', '!.git/',
+          '--glob', '!.venv/',
         },
-        file_ignore_patterns = { '.git/', '.venv/' },
+        file_ignore_patterns = { '^%.git/' },
       },
       pickers = {
         live_grep = {

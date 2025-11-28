@@ -11,27 +11,8 @@ return {
     -- Setup mason first
     require('mason').setup()
     
-    -- Setup mason-lspconfig
-    require('mason-lspconfig').setup({
-      ensure_installed = { 'lua_ls', 'pyright', 'clangd', 'marksman' },
-    })
-    
-    -- Manually ensure formatters are installed
-    vim.defer_fn(function()
-      local registry = require('mason-registry')
-      local function ensure_installed(name)
-        local ok, pkg = pcall(registry.get_package, name)
-        if ok and not pkg:is_installed() then
-          vim.notify('Installing ' .. name)
-          pkg:install()
-        end
-      end
-      
-      -- Install formatters
-      ensure_installed('stylua')
-      ensure_installed('black')
-      ensure_installed('isort')
-    end, 100)
+    -- Setup mason-lspconfig (without auto-install due to missing dependencies)
+    require('mason-lspconfig').setup({})
     
     -- Setup capabilities for nvim-cmp
     local capabilities = vim.lsp.protocol.make_client_capabilities()
@@ -41,10 +22,9 @@ return {
     end
     
     -- Configure individual servers
-    local lspconfig = require('lspconfig')
     
     -- Lua
-    lspconfig.lua_ls.setup({
+    vim.lsp.config('lua_ls', {
       capabilities = capabilities,
       settings = {
         Lua = {
@@ -66,17 +46,17 @@ return {
     })
     
     -- Python
-    lspconfig.pyright.setup({
+    vim.lsp.config('pyright', {
       capabilities = capabilities,
     })
     
     -- C/C++
-    lspconfig.clangd.setup({
+    vim.lsp.config('clangd', {
       capabilities = capabilities,
     })
     
     -- Markdown
-    lspconfig.marksman.setup({
+    vim.lsp.config('marksman', {
       capabilities = capabilities,
     })
     

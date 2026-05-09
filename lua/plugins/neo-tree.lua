@@ -13,6 +13,7 @@ return {
     { '\\', ':Neotree reveal<CR>', { desc = 'NeoTree reveal' } },
   },
   opts = {
+    use_icons = false,
     event_handlers = {
       {
         event = "file_opened",

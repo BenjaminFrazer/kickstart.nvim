@@ -80,23 +80,16 @@ return {
     vim.keymap.set('n', '<leader>,', builtin.oldfiles, { desc = 'Search Recent Files' })
     vim.keymap.set('n', '<leader>so', builtin.vim_options, { desc = '[S]earch [O]ptions' })
     vim.keymap.set('n', '<leader><leader>', function()
-      -- Get git root directory
+      -- Find all files in the current git repo (or cwd if not in one).
       local git_root = vim.fn.systemlist('git rev-parse --show-toplevel')[1]
       if vim.v.shell_error ~= 0 then
-        -- Not in a git repo, use current working directory
         git_root = vim.fn.getcwd()
       end
-      
-      -- Use oldfiles to get recently edited files, then filter by git root
-      builtin.oldfiles {
+      builtin.find_files {
         cwd = git_root,
-        cwd_only = true,
-        -- This will show only files from the current workspace
-        only_cwd = true,
-        -- Show hidden files but respect .gitignore
         hidden = true,
       }
-    end, { desc = 'Recent files in workspace' })
+    end, { desc = 'Find files in workspace' })
 
     -- Advanced keymaps
     vim.keymap.set('n', '<leader>/', function()

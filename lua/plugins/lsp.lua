@@ -25,6 +25,31 @@ return {
     if has_cmp then
       capabilities = vim.tbl_deep_extend('force', capabilities, cmp_nvim_lsp.default_capabilities())
     end
+    -- Advertise that we can supply config dynamically (pyright relies on this
+    -- to learn pythonPath via workspace/configuration).
+    capabilities.workspace = capabilities.workspace or {}
+    capabilities.workspace.configuration = true
+
+    -- Respond to `workspace/configuration` requests by reading the matching
+    -- key path out of the client's `settings` table. lspconfig used to do
+    -- this for us; native vim.lsp does not.
+    vim.lsp.handlers['workspace/configuration'] = function(_, result, ctx)
+      local client = vim.lsp.get_client_by_id(ctx.client_id)
+      if not client or not result or not result.items then return {} end
+      local out = {}
+      for _, item in ipairs(result.items) do
+        local value = client.config.settings or {}
+        if item.section and item.section ~= '' then
+          for part in string.gmatch(item.section, '[^.]+') do
+            if type(value) ~= 'table' then value = vim.NIL; break end
+            value = value[part]
+            if value == nil then value = vim.NIL; break end
+          end
+        end
+        table.insert(out, value)
+      end
+      return out
+    end
 
     -- Python LSP (pyright)
     vim.api.nvim_create_autocmd("FileType", {
@@ -39,7 +64,35 @@ return {
             return
           end
         end
-        
+
+        -- Resolve the Python interpreter pyright should analyze against.
+        -- Precedence: active venv ($VIRTUAL_ENV) > conda env ($CONDA_PREFIX)
+        -- > project-local .venv / venv > $PYTHON > `python` on PATH.
+        local function find_python()
+          local function bin(dir)
+            for _, p in ipairs({ dir .. '/bin/python', dir .. '/bin/python3', dir .. '/Scripts/python.exe' }) do
+              if vim.fn.executable(p) == 1 then return p end
+            end
+          end
+          if vim.env.VIRTUAL_ENV and vim.env.VIRTUAL_ENV ~= '' then
+            local p = bin(vim.env.VIRTUAL_ENV); if p then return p end
+          end
+          if vim.env.CONDA_PREFIX and vim.env.CONDA_PREFIX ~= '' then
+            local p = bin(vim.env.CONDA_PREFIX); if p then return p end
+          end
+          local root = get_root_dir({ 'pyproject.toml', 'setup.py', 'requirements.txt', '.git' })
+          for _, sub in ipairs({ '.venv', 'venv', '.env' }) do
+            local p = bin(root .. '/' .. sub); if p then return p end
+          end
+          if vim.env.PYTHON and vim.fn.executable(vim.env.PYTHON) == 1 then
+            return vim.env.PYTHON
+          end
+          if vim.fn.executable('python3') == 1 then return vim.fn.exepath('python3') end
+          if vim.fn.executable('python') == 1 then return vim.fn.exepath('python') end
+        end
+
+        local python_path = find_python()
+
         vim.lsp.start({
           name = 'pyright',
           cmd = { pyright_cmd, '--stdio' },
@@ -47,14 +100,22 @@ return {
           capabilities = capabilities,
           settings = {
             python = {
+              pythonPath = python_path,
+              venvPath = vim.env.VIRTUAL_ENV and vim.fn.fnamemodify(vim.env.VIRTUAL_ENV, ':h') or nil,
               analysis = {
                 typeCheckingMode = 'basic',
                 autoSearchPaths = true,
                 useLibraryCodeForTypes = true,
+                diagnosticMode = 'workspace',
               },
             },
           },
         })
+        if python_path then
+          vim.schedule(function()
+            vim.notify('pyright using python: ' .. python_path, vim.log.levels.INFO)
+          end)
+        end
       end,
     })
 

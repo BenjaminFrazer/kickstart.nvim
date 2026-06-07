@@ -287,5 +287,122 @@ return {
       local hl = "DiagnosticSign" .. type
       vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
     end
+
+    -- User commands replicating the familiar :Lsp* family (normally provided
+    -- by nvim-lspconfig), implemented directly against vim.lsp.
+    local function clients_for_buf(bufnr)
+      return vim.lsp.get_clients({ bufnr = bufnr })
+    end
+
+    vim.api.nvim_create_user_command('LspInfo', function()
+      local bufnr = vim.api.nvim_get_current_buf()
+      local clients = clients_for_buf(bufnr)
+      if vim.tbl_isempty(clients) then
+        print('No LSP clients attached to buffer ' .. bufnr)
+        return
+      end
+      local lines = { 'LSP clients attached to buffer ' .. bufnr .. ':' }
+      for _, c in ipairs(clients) do
+        table.insert(lines, ('  - %s (id=%d, root=%s)'):format(c.name, c.id, c.config.root_dir or '?'))
+        table.insert(lines, '      cmd: ' .. table.concat(c.config.cmd or {}, ' '))
+      end
+      print(table.concat(lines, '\n'))
+    end, { desc = 'Show LSP clients for current buffer' })
+
+    vim.api.nvim_create_user_command('LspStop', function(opts)
+      local bufnr = vim.api.nvim_get_current_buf()
+      local targets = clients_for_buf(bufnr)
+      if opts.args ~= '' then
+        targets = vim.tbl_filter(function(c) return c.name == opts.args end, targets)
+      end
+      for _, c in ipairs(targets) do
+        c.stop()
+        vim.notify('Stopped LSP client: ' .. c.name)
+      end
+    end, {
+      nargs = '?',
+      desc = 'Stop LSP client(s) attached to current buffer',
+      complete = function()
+        return vim.tbl_map(function(c) return c.name end, clients_for_buf(vim.api.nvim_get_current_buf()))
+      end,
+    })
+
+    vim.api.nvim_create_user_command('LspRestart', function(opts)
+      local bufnr = vim.api.nvim_get_current_buf()
+      local targets = clients_for_buf(bufnr)
+      if opts.args ~= '' then
+        targets = vim.tbl_filter(function(c) return c.name == opts.args end, targets)
+      end
+      local configs = {}
+      for _, c in ipairs(targets) do
+        table.insert(configs, vim.deepcopy(c.config))
+        c.stop()
+      end
+      vim.defer_fn(function()
+        for _, cfg in ipairs(configs) do
+          vim.lsp.start(cfg)
+          vim.notify('Restarted LSP client: ' .. cfg.name)
+        end
+      end, 500)
+    end, {
+      nargs = '?',
+      desc = 'Restart LSP client(s) attached to current buffer',
+      complete = function()
+        return vim.tbl_map(function(c) return c.name end, clients_for_buf(vim.api.nvim_get_current_buf()))
+      end,
+    })
+
+    vim.api.nvim_create_user_command('LspLog', function()
+      vim.cmd('tabnew ' .. vim.lsp.get_log_path())
+    end, { desc = 'Open the LSP log in a new tab' })
+
+    vim.api.nvim_create_user_command('LspCapabilities', function()
+      for _, c in ipairs(clients_for_buf(vim.api.nvim_get_current_buf())) do
+        print('=== ' .. c.name .. ' ===')
+        print(vim.inspect(c.server_capabilities))
+      end
+    end, { desc = 'Print server capabilities for attached LSP clients' })
+
+    -- Point pyright at a specific Python interpreter for the current workspace.
+    -- Equivalent to nvim-lspconfig's :PyrightSetPythonPath. Accepts either the
+    -- interpreter path directly or a venv directory (will auto-resolve bin/python).
+    vim.api.nvim_create_user_command('LspPyrightSetPython', function(opts)
+      local path = vim.fn.expand(opts.args)
+      if path == '' then
+        path = vim.fn.input('Python interpreter: ', '', 'file')
+        path = vim.fn.expand(path)
+      end
+      if path == '' then return end
+      if vim.fn.isdirectory(path) == 1 then
+        local candidate = path .. '/bin/python'
+        if vim.fn.executable(candidate) == 1 then
+          path = candidate
+        else
+          candidate = path .. '/Scripts/python.exe'
+          if vim.fn.executable(candidate) == 1 then path = candidate end
+        end
+      end
+      if vim.fn.executable(path) ~= 1 then
+        vim.notify('Not an executable: ' .. path, vim.log.levels.ERROR)
+        return
+      end
+
+      local pyrights = vim.tbl_filter(function(c) return c.name == 'pyright' end, vim.lsp.get_clients())
+      if vim.tbl_isempty(pyrights) then
+        vim.notify('No pyright client attached', vim.log.levels.WARN)
+        return
+      end
+      for _, client in ipairs(pyrights) do
+        client.settings = vim.tbl_deep_extend('force', client.settings or {}, {
+          python = { pythonPath = path },
+        })
+        client.notify('workspace/didChangeConfiguration', { settings = client.settings })
+        vim.notify(('pyright (id=%d): pythonPath = %s'):format(client.id, path))
+      end
+    end, {
+      nargs = '?',
+      complete = 'file',
+      desc = 'Set pyright python interpreter path (workspace setting)',
+    })
   end,
 }

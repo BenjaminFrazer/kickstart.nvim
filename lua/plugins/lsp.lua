@@ -156,6 +156,31 @@ return {
       end,
     })
 
+    -- CMake LSP (cmake-language-server)
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = "cmake",
+      callback = function()
+        local cmake_cmd = mason_bin .. '/cmake-language-server'
+        if not executable_exists(cmake_cmd) then
+          cmake_cmd = 'cmake-language-server'
+          if not executable_exists(cmake_cmd) then
+            vim.notify('cmake-language-server not found. Install via Mason (:MasonInstall cmake-language-server) or pip', vim.log.levels.WARN)
+            return
+          end
+        end
+
+        vim.lsp.start({
+          name = 'cmake',
+          cmd = { cmake_cmd },
+          root_dir = get_root_dir({ 'CMakeLists.txt', '.git' }),
+          capabilities = capabilities,
+          init_options = {
+            buildDirectory = 'build',
+          },
+        })
+      end,
+    })
+
     -- C/C++ LSP (clangd)
     vim.api.nvim_create_autocmd("FileType", {
       pattern = { "c", "cpp", "objc", "objcpp" },

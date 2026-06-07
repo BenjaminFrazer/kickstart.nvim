@@ -25,9 +25,22 @@ vim.keymap.set('n', '<leader>pc', '<cmd>make<cr>', { desc = 'compile project' })
 -- File browser
 vim.keymap.set('n', '<leader>.', ':Telescope file_browser path=%:p:h select_buffer=true<CR>', { desc = 'File browser' })
 
--- Copy relative path
+-- Copy relative path / file:line reference
 vim.api.nvim_create_user_command('CopyRelPath', "call setreg('+', expand('%'))", {})
 vim.keymap.set('n', '<leader>fy', '<cmd>CopyRelPath<cr>', { desc = 'Yank relative path' })
+vim.keymap.set('n', '<leader>fl', function()
+  local ref = vim.fn.expand('%') .. ':' .. vim.fn.line('.')
+  vim.fn.setreg('+', ref)
+  vim.notify(ref)
+end, { desc = 'Yank file:line reference' })
+vim.keymap.set('v', '<leader>fl', function()
+  local top = vim.fn.line('v')
+  local bot = vim.fn.line('.')
+  if top > bot then top, bot = bot, top end
+  local ref = vim.fn.expand('%') .. ':' .. top .. '-' .. bot
+  vim.fn.setreg('+', ref)
+  vim.notify(ref)
+end, { desc = 'Yank file:line range reference' })
 
 -- Format toggle commands
 vim.api.nvim_create_user_command("FormatDisable", function(args)

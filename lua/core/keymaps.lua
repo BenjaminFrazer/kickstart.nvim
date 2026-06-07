@@ -1,3 +1,6 @@
+-- Disable autoformat-on-save by default (toggle with :FormatEnable / :FormatDisable)
+vim.g.disable_autoformat = true
+
 -- Clear search highlight on pressing <Esc> in normal mode
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 

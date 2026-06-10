@@ -77,7 +77,13 @@ return {
     vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
     vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
     vim.keymap.set('n', '<leader>si', builtin.lsp_document_symbols, { desc = '[S]earch Symbols' })
-    vim.keymap.set('n', '<leader>,', builtin.oldfiles, { desc = 'Search Recent Files' })
+    vim.keymap.set('n', '<leader>,', function()
+      local git_root = vim.fn.systemlist('git rev-parse --show-toplevel')[1]
+      if vim.v.shell_error ~= 0 then
+        git_root = vim.fn.getcwd()
+      end
+      builtin.oldfiles({ only_cwd = true, cwd = git_root })
+    end, { desc = 'Search Recent Files (repo)' })
     vim.keymap.set('n', '<leader>so', builtin.vim_options, { desc = '[S]earch [O]ptions' })
     vim.keymap.set('n', '<leader><leader>', function()
       -- Find all files in the current git repo (or cwd if not in one).

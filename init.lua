@@ -157,6 +157,9 @@ vim.opt.scrolloff = 10
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
 vim.keymap.set('n', '<leader>.', vim.api.nvim_command, { desc = 'explore current directory... i hope' })
+vim.keymap.set('n', '<leader>fn', function()
+  require('custom.plugins.tools').create_timestamped_file()
+end, { desc = 'Create [F]ile with timestamp [N]ew' })
 
 -- Set highlight on search, but clear on pressing <Esc> in normal mode
 vim.opt.hlsearch = true

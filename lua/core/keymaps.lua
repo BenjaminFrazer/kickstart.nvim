@@ -25,3 +25,18 @@ vim.keymap.set('n', '<leader>.', ':Telescope file_browser path=%:p:h select_buff
 -- Copy relative path
 vim.api.nvim_create_user_command('CopyRelPath', "call setreg('+', expand('%'))", {})
 vim.keymap.set('n', '<leader>fy', '<cmd>CopyRelPath<cr>', { desc = 'Yank relative path' })
+
+-- Quick one-line command runner: single transient prompt at the bottom,
+-- runs async (non-blocking), output shown transiently via vim.notify.
+vim.keymap.set('n', '<leader>!', function()
+  vim.ui.input({ prompt = '❯ ' }, function(cmd)
+    if not cmd or cmd == '' then return end
+    vim.system({ vim.o.shell, '-c', cmd }, { text = true }, function(obj)
+      vim.schedule(function()
+        local out = vim.trim((obj.stdout or '') .. (obj.stderr or ''))
+        if out == '' then out = ('[exit %d]'):format(obj.code) end
+        vim.notify(out, obj.code == 0 and vim.log.levels.INFO or vim.log.levels.ERROR)
+      end)
+    end)
+  end)
+end, { desc = 'Run shell command' })

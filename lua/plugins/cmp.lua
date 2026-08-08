@@ -15,6 +15,7 @@ return {
     'hrsh7th/cmp-nvim-lsp',
     'hrsh7th/cmp-path',
     'jc-doyle/cmp-pandoc-references',
+    'rcarriga/cmp-dap',
   },
   config = function()
     local cmp = require 'cmp'
@@ -28,6 +29,12 @@ return {
     require('cmp_sources.rst')
 
     cmp.setup {
+      -- nvim-cmp disables itself in prompt buffers by default, which kills
+      -- completion in the dap REPL. Re-enable it for dap buffers (cmp-dap).
+      enabled = function()
+        return vim.api.nvim_get_option_value('buftype', { buf = 0 }) ~= 'prompt'
+          or require('cmp_dap').is_dap_buffer()
+      end,
       snippet = {
         expand = function(args)
           luasnip.lsp_expand(args.body)
@@ -76,6 +83,12 @@ return {
       -- Show completion menu automatically after trigger character
       completion = {
         autocomplete = { require('cmp.types').cmp.TriggerEvent.TextChanged },
+      },
+    })
+    -- Completion inside the nvim-dap REPL and dap-ui eval/hover buffers.
+    cmp.setup.filetype({ 'dap-repl', 'dapui_watches', 'dapui_hover' }, {
+      sources = {
+        { name = 'dap' },
       },
     })
   end,

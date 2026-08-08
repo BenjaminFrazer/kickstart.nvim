@@ -10,7 +10,7 @@ return {
     -- Document existing key chains
     require('which-key').add {
       { '<leader>c', group = '[C]ode' },
-      { '<leader>d', group = '[D]ocument' },
+      { '<leader>d', group = '[D]ebug' },
       { '<leader>h', group = 'Git [H]unk' },
       { '<leader>r', group = '[R]ename' },
       { '<leader>s', group = '[S]earch' },

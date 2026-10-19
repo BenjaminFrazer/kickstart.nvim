@@ -12,7 +12,7 @@ return {
       { '<leader>c', group = '[C]ode' },
       { '<leader>d', group = '[D]ebug' },
       { '<leader>h', group = 'Git [H]unk' },
-      { '<leader>r', group = '[R]ename' },
+      { '<leader>r', group = '[R]EPL' },
       { '<leader>s', group = '[S]earch' },
       { '<leader>t', group = '[T]oggle' },
       { '<leader>w', group = '[W]orkspace' },
